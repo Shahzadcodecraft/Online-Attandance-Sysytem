@@ -21,7 +21,9 @@ An AI-powered facial recognition attendance system built with React, AWS Rekogni
 ### Prerequisites
 
 - Node.js 18+ or Bun
-- Backend API running (see AWS setup below)
+- AWS account with S3 + Rekognition
+- MongoDB instance (local or Atlas)
+- Backend API running (included in `backend/`)
 
 ### Installation
 
@@ -31,18 +33,50 @@ bun install
 # or
 npm install
 
-# Start development server
+# Start frontend development server
 bun run dev
 # or
 npm run dev
 ```
 
+### Backend Setup (Production-Oriented)
+
+This repository now includes a backend service at `backend/` for:
+
+- Registering users from webcam base64 **or directly from S3 object keys**
+- Verifying users from webcam base64 **or S3 object keys**
+- Marking check-in/check-out attendance in MongoDB
+
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+Backend runs on `http://localhost:5000` by default.
+
 ### Environment Variables
 
-Create a `.env` file in the root directory:
+Create a frontend `.env` file in the root directory:
 
 ```env
-VITE_API_URL=http://localhost:3000/api
+VITE_API_URL=http://localhost:5000/api
+```
+
+You can copy from `.env.example` and adjust for your backend URL.
+
+Create backend `.env` from `backend/.env.example`:
+
+```env
+PORT=5000
+NODE_ENV=development
+CORS_ORIGIN=http://localhost:5173
+
+AWS_REGION=us-east-1
+AWS_S3_BUCKET=your-face-images-bucket
+AWS_REKOGNITION_COLLECTION_ID=faceguard-collection
+
+MONGODB_URI=mongodb://127.0.0.1:27017/faceguard
 ```
 
 ## AWS Credentials Management
@@ -120,6 +154,45 @@ src/
   hooks/            # Custom React hooks
   lib/              # Utility functions
 ```
+
+## MongoDB Collections
+
+Backend automatically creates and uses these collections:
+
+1. `users`
+2. `face_maps`
+3. `attendance`
+
+## API Usage (S3 Image Flow)
+
+### Register using an existing S3 image
+
+`POST /api/register`
+
+```json
+{
+  "fullName": "John Doe",
+  "machineCode": "M-100",
+  "s3ObjectKey": "registrations/john.jpg"
+}
+```
+
+### Verify attendance using an S3 image
+
+`POST /api/verify`
+
+```json
+{
+  "s3ObjectKey": "verifications/john-checkin.jpg"
+}
+```
+
+If matched, backend returns:
+
+- `matched: true`
+- `userId`, `userName`
+- `action: "check-in" | "check-out"`
+- `attendance` record
 
 ## Scripts
 

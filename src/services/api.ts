@@ -30,20 +30,59 @@ export interface RegisterResponse {
   message: string;
 }
 
+export interface ImagePayload {
+  imageBase64?: string;
+  s3ObjectKey?: string;
+  s3Bucket?: string;
+}
+
 /**
  * Register a new user's face with the backend.
  * Backend stores the face in AWS Rekognition collection.
  */
 export async function registerUser(
-  name: string,
   imageBase64: string,
-  phone?: string,
-  employeeId?: string
+  phoneNumber?: string,
+  machineCode?: string
 ): Promise<RegisterResponse> {
   const response = await fetch(`${BASE_URL}/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, image: imageBase64, phone, employeeId }),
+    body: JSON.stringify({
+      image: imageBase64,
+      phoneNumber,
+      machineCode,
+      // Keep legacy keys for older backend contracts.
+      phone: phoneNumber,
+      employeeId: machineCode,
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.message || "Registration failed");
+  }
+
+  return response.json();
+}
+
+export async function registerUserFromS3(
+  s3ObjectKey: string,
+  phoneNumber?: string,
+  machineCode?: string,
+  s3Bucket?: string
+): Promise<RegisterResponse> {
+  const response = await fetch(`${BASE_URL}/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      s3ObjectKey,
+      s3Bucket,
+      phoneNumber,
+      machineCode,
+      phone: phoneNumber,
+      employeeId: machineCode,
+    }),
   });
 
   if (!response.ok) {
@@ -63,6 +102,24 @@ export async function verifyFace(imageBase64: string): Promise<VerifyResponse> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ image: imageBase64 }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.message || "Verification failed");
+  }
+
+  return response.json();
+}
+
+export async function verifyFaceFromS3(
+  s3ObjectKey: string,
+  s3Bucket?: string
+): Promise<VerifyResponse> {
+  const response = await fetch(`${BASE_URL}/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ s3ObjectKey, s3Bucket }),
   });
 
   if (!response.ok) {

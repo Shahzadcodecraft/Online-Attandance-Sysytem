@@ -20,6 +20,11 @@ export default function WebcamScanner({ fullscreen = false }: { fullscreen?: boo
   const [result, setResult] = useState<VerifyResponse | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
 
+  const startCooldown = useCallback(() => {
+    setCooldown(COOLDOWN_SECONDS);
+    setTimeout(() => setScanState("cooldown"), 3000);
+  }, []);
+
   // Sync webcam video element to face detection hook
   useEffect(() => {
     const interval = setInterval(() => {
@@ -46,32 +51,6 @@ export default function WebcamScanner({ fullscreen = false }: { fullscreen?: boo
     }
   }, [faceDetected, scanState]);
 
-  // Countdown timer
-  useEffect(() => {
-    if (scanState !== "countdown") return;
-
-    if (countdown <= 0) {
-      captureAndVerify();
-      return;
-    }
-
-    const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [scanState, countdown]);
-
-  // Cooldown timer
-  useEffect(() => {
-    if (scanState !== "cooldown") return;
-
-    if (cooldown <= 0) {
-      setScanState("idle");
-      return;
-    }
-
-    const timer = setTimeout(() => setCooldown((c) => c - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [scanState, cooldown]);
-
   const captureAndVerify = useCallback(async () => {
     setScanState("processing");
 
@@ -91,18 +70,40 @@ export default function WebcamScanner({ fullscreen = false }: { fullscreen?: boo
       setResult(response);
       setScanState(response.matched ? "success" : "error");
       if (!response.matched) setErrorMsg(response.message);
-    } catch (err: any) {
-      setErrorMsg(err.message || "Verification failed");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Verification failed";
+      setErrorMsg(message);
       setScanState("error");
     }
 
     startCooldown();
-  }, []);
+  }, [startCooldown]);
 
-  const startCooldown = () => {
-    setCooldown(COOLDOWN_SECONDS);
-    setTimeout(() => setScanState("cooldown"), 3000);
-  };
+  // Countdown timer
+  useEffect(() => {
+    if (scanState !== "countdown") return;
+
+    if (countdown <= 0) {
+      captureAndVerify();
+      return;
+    }
+
+    const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [scanState, countdown, captureAndVerify]);
+
+  // Cooldown timer
+  useEffect(() => {
+    if (scanState !== "cooldown") return;
+
+    if (cooldown <= 0) {
+      setScanState("idle");
+      return;
+    }
+
+    const timer = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [scanState, cooldown]);
 
   const getBorderColor = () => {
     switch (scanState) {

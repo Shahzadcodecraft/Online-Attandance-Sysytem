@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState } from "react";
 import Webcam from "react-webcam";
 import { registerUser } from "@/services/api";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,8 @@ import { Camera, UserPlus, CheckCircle2, Loader2 } from "lucide-react";
 
 export default function RegisterForm() {
   const webcamRef = useRef<Webcam>(null);
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [employeeId, setEmployeeId] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [machineCode, setMachineCode] = useState("");
   const [captured, setCaptured] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
@@ -21,44 +20,37 @@ export default function RegisterForm() {
   };
 
   const handleRegister = async () => {
-    if (!name.trim() || !captured) return;
+    if (!captured) return;
 
     setStatus("loading");
     const base64 = captured.replace(/^data:image\/\w+;base64,/, "");
 
     try {
-      const res = await registerUser(name.trim(), base64, phone.trim() || undefined, employeeId.trim() || undefined);
+      const res = await registerUser(
+        base64,
+        phoneNumber.trim() || undefined,
+        machineCode.trim() || undefined
+      );
       setStatus("success");
-      setMessage(res.message || `User "${name}" registered successfully!`);
-      setName("");
-      setPhone("");
-      setEmployeeId("");
+      setMessage(res.message || "User registered successfully!");
+      setPhoneNumber("");
+      setMachineCode("");
       setCaptured(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Registration failed";
       setStatus("error");
-      setMessage(err.message || "Registration failed");
+      setMessage(message);
     }
   };
 
   return (
     <div className="w-full max-w-lg mx-auto space-y-6">
       <div className="space-y-2">
-        <Label htmlFor="name" className="text-sm text-muted-foreground">Full Name</Label>
-        <Input
-          id="name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Enter employee name"
-          className="bg-secondary border-border"
-        />
-      </div>
-
-      <div className="space-y-2">
         <Label htmlFor="phone" className="text-sm text-muted-foreground">Phone Number</Label>
         <Input
           id="phone"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          value={phoneNumber}
+          onChange={(e) => setPhoneNumber(e.target.value)}
           placeholder="Enter phone number"
           type="tel"
           className="bg-secondary border-border"
@@ -66,12 +58,12 @@ export default function RegisterForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="employeeId" className="text-sm text-muted-foreground">Employee ID</Label>
+        <Label htmlFor="machineCode" className="text-sm text-muted-foreground">Machine Code</Label>
         <Input
-          id="employeeId"
-          value={employeeId}
-          onChange={(e) => setEmployeeId(e.target.value)}
-          placeholder="Enter organization-assigned ID"
+          id="machineCode"
+          value={machineCode}
+          onChange={(e) => setMachineCode(e.target.value)}
+          placeholder="Enter machine code"
           className="bg-secondary border-border"
         />
       </div>
@@ -110,7 +102,7 @@ export default function RegisterForm() {
 
       <Button
         onClick={handleRegister}
-        disabled={!name.trim() || !captured || status === "loading"}
+        disabled={!captured || status === "loading"}
         className="w-full gap-2"
         size="lg"
       >

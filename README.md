@@ -1,4 +1,4 @@
-# FaceGuard - Online Attendance System
+# FaceGuard - Online Attendance System.
 
 An AI-powered facial recognition attendance system built with React, AWS Rekognition, and face-api.js.
 
